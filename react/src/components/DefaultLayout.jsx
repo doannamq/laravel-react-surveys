@@ -15,6 +15,8 @@ import {
 } from "@heroicons/react/24/outline";
 import { Navigate, NavLink, Outlet } from "react-router-dom";
 import { useStateContext } from "../contexts/ContextProvider";
+import axiosClient from "../axios";
+import { useEffect, useState } from "react";
 
 const navigation = [
     { name: "Dashboard", to: "/dashboard" },
@@ -26,15 +28,43 @@ function classNames(...classes) {
 }
 
 export default function DefaultLayout() {
-    const { currentUser, userToken } = useStateContext();
+    const { currentUser, userToken, setCurrentUser, setUserToken } =
+        useStateContext();
 
     if (!userToken) {
         return <Navigate to="login" />;
     }
 
-    const logout = (event) => {
+    const logout = async (event) => {
         event.preventDefault();
-        console.log("Log out");
+        try {
+            // Gọi API logout
+            await axiosClient.post("/logout");
+
+            // Xóa token xác thực từ localStorage
+            localStorage.removeItem("TOKEN");
+
+            // Reset state
+            setCurrentUser({});
+            setUserToken(null);
+
+            // Xóa CSRF token từ Axios headers nếu có
+            if (axiosClient.defaults.headers.common["X-CSRF-TOKEN"]) {
+                delete axiosClient.defaults.headers.common["X-CSRF-TOKEN"];
+            }
+
+            // Tùy chọn: Lấy CSRF token mới
+            try {
+                const response = await axiosClient.get("/csrf-token");
+                const newCsrfToken = response.data.csrf_token;
+                axiosClient.defaults.headers.common["X-CSRF-TOKEN"] =
+                    newCsrfToken;
+            } catch (error) {
+                console.error("Failed to fetch new CSRF token:", error);
+            }
+        } catch (error) {
+            console.error("Logout failed:", error);
+        }
     };
 
     return (

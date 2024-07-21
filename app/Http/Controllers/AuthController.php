@@ -28,35 +28,36 @@ class AuthController extends Controller
         ]);
     }
 
-    // public function login(LoginRequest $request)
-    // {
-    //     $credentials = $request->validated();
-    //     $remember = $credentials['remember'] ?? false;
-    //     unset($credentials['remember']);
+    public function login(LoginRequest $request)
+    {
+        $credentials = $request->validated();
+        $remember = $credentials['remember'] ?? false;
+        unset($credentials['remember']);
 
-    //     if (!Auth::attempt($credentials, $remember)) {
-    //         return response([
-    //             'error' => 'The Provided credentials are not correct'
-    //         ], 422);
-    //     }
-    //     $user = Auth::user();
-    //     $token = $user->createToken('main')->plainTextToken;
+        if (!Auth::attempt($credentials, $remember)) {
+            return response([
+                'error' => 'Unverifiable. Please check your account and password!'
+            ], 422);
+        }
+        $user = Auth::user();
+        $token = $user->createToken('main')->plainTextToken;
 
-    //     return response([
-    //         'user' => $user,
-    //         'token' => $token
-    //     ]);
-    // }
+        return response([
+            'user' => $user,
+            'token' => $token
+        ]);
+    }
 
-    // public function logout(Request $request)
-    // {
-    //     /** @var User $user */
-    //     $user = Auth::user();
-    //     // Revoke the token that was used to authenticate the current request...
-    //     $user->currentAccessToken()->delete();
+    public function logout(Request $request)
+    {
+        $request->session()->regenerateToken();
 
-    //     return response([
-    //         'success' => true
-    //     ]);
-    // }
+        Auth::guard('web')->logout();
+
+        $request->session()->invalidate();
+
+        $request->session()->regenerate();
+
+        return response()->json(['message' => 'Logged out successfully']);
+    }
 }
