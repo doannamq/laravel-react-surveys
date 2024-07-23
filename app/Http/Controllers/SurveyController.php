@@ -8,6 +8,7 @@ use Illuminate\Support\Str;
 use GuzzleHttp\Psr7\Request;
 use App\Models\SurveyQuestion;
 use App\Enums\QuestionTypeEnum;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\File;
 use Illuminate\Validation\Rules\Enum;
 use App\Http\Resources\SurveyResource;
@@ -47,10 +48,10 @@ class SurveyController extends Controller
         $survey = Survey::create($data);
 
         // Create new questions
-        // foreach ($data['questions'] as $question) {
-        //     $question['survey_id'] = $survey->id;
-        //     $this->createQuestion($question);
-        // }
+        foreach ($data['questions'] as $question) {
+            $question['survey_id'] = $survey->id;
+            $this->createQuestion($question);
+        }
 
         return new SurveyResource($survey);
     }
@@ -184,10 +185,19 @@ class SurveyController extends Controller
         }
         $validator = Validator::make($data, [
             'question' => 'required|string',
-            'type' => ['required', new Enum(QuestionTypeEnum::class)],
+            'type' => ['required', Rule::in(
+                [
+                    'text',
+                    // QuestionTypeEnum::Text->value,
+                    // QuestionTypeEnum::Textarea->value,
+                    // QuestionTypeEnum::Select->value,
+                    // QuestionTypeEnum::Radio->value,
+                    // QuestionTypeEnum::Checkbox->value,
+                ]
+            )],
             'description' => 'nullable|string',
             'data' => 'present',
-            'survey_id' => 'exists:App\Models\Survey, id'
+            'survey_id' => 'exists:App\Models\Survey,id'
         ]);
 
         return SurveyQuestion::create($validator->validated());
@@ -203,7 +213,7 @@ class SurveyController extends Controller
             'question' => 'required|string',
             'type' => ['required', new Enum(QuestionTypeEnum::class)],
             'description' => 'nullable|string',
-            'data' => 'present'
+            'data' => 'present',
         ]);
 
         return $question->update($validator->validated());
