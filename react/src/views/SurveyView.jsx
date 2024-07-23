@@ -1,9 +1,12 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import PageComponent from "../components/PageComponent";
 import { PhotoIcon } from "@heroicons/react/24/outline";
 import TButton from "../components/core/TButton";
+import axiosClient from "../axios.js";
+import { useNavigate } from "react-router-dom";
 
 const SurveyView = () => {
+    const navigate = useNavigate();
     const [survey, setSurvey] = useState({
         title: "",
         slug: "",
@@ -15,13 +18,61 @@ const SurveyView = () => {
         question: [],
     });
 
-    const onImageChoose = () => {
-        console.log("on image choose");
+    const [error, setError] = useState("");
+
+    const [csrfToken, setCsrfToken] = useState("");
+
+    useEffect(() => {
+        // Fetch CSRF token when component mounts
+        axiosClient
+            .get("/csrf-token")
+            .then((response) => {
+                setCsrfToken(response.data.csrf_token);
+            })
+            .catch((error) => {
+                console.error("Error fetching CSRF token:", error);
+            });
+    }, []);
+
+    const onImageChoose = (event) => {
+        const file = event.target.files[0];
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            setSurvey({
+                ...survey,
+                image: file,
+                image_url: reader.result,
+            });
+
+            event.target.value = "";
+        };
+        reader.readAsDataURL(file);
     };
 
     const onSubmit = (event) => {
         event.preventDefault();
-        console.log(event);
+        const payload = { ...survey };
+        if (payload.image) {
+            payload.image = payload.image_url;
+        }
+        delete payload.image_url;
+        axiosClient
+            .post("/survey", payload, {
+                headers: {
+                    "X-CSRF-TOKEN": csrfToken,
+                },
+            })
+            .then((res) => {
+                console.log(res);
+                navigate("/surveys");
+            })
+            .catch((err) => {
+                if (err && err.response) {
+                    setError(err.response.data.errors);
+                }
+                console.log(err, err.response);
+            });
     };
 
     return (
@@ -90,6 +141,11 @@ const SurveyView = () => {
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-50 
                                 focus:ring-indigo-500 sm:text-sm"
                             />
+                            {error.title && (
+                                <small className="text-red-500">
+                                    {error.title}
+                                </small>
+                            )}
                         </div>
                         {/* Title */}
 
@@ -141,6 +197,11 @@ const SurveyView = () => {
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-50 
                                 focus:ring-indigo-500 sm:text-sm"
                             />
+                            {error.expire_date && (
+                                <small className="text-red-500">
+                                    {error.expire_date}
+                                </small>
+                            )}
                         </div>
                         {/* Expire Date */}
 
@@ -155,7 +216,7 @@ const SurveyView = () => {
                                     onChange={(event) =>
                                         setSurvey({
                                             ...survey,
-                                            status: event.target.value,
+                                            status: event.target.checked,
                                         })
                                     }
                                     className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
