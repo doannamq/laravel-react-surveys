@@ -17,6 +17,7 @@ import { Navigate, NavLink, Outlet } from "react-router-dom";
 import { useStateContext } from "../contexts/ContextProvider";
 import axiosClient from "../axios";
 import { useEffect, useState } from "react";
+import Toast from "./Toast";
 
 const navigation = [
     { name: "Dashboard", to: "/dashboard" },
@@ -66,6 +67,12 @@ export default function DefaultLayout() {
             console.error("Logout failed:", error);
         }
     };
+
+    useEffect(() => {
+        axiosClient.get("/me").then(({ data }) => {
+            setCurrentUser(data);
+        });
+    }, []);
 
     return (
         <>
@@ -201,6 +208,8 @@ export default function DefaultLayout() {
                     </DisclosurePanel>
                 </Disclosure>
                 <Outlet />
+
+                <Toast />
 
                 <main>
                     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8"></div>
